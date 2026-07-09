@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Angle & Setup Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            color: var(--text-main);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        @media (min-width: 850px) {
+            .container {
+                grid-template-columns: 450px 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="number"] {
+            flex: 1;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--accent-blue);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 8px;
+            accent-color: var(--accent-blue);
+        }
+
+        .visualizer-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0b0f19;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .result-box {
+            background-color: var(--bg-color);
+            border-left: 4px solid var(--border-color);
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .result-box.blue { border-left-color: var(--accent-blue); }
+        .result-box.emerald { border-left-color: var(--accent-emerald); }
+        .result-box.amber { border-left-color: var(--accent-amber); }
+
+        .result-box .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .result-box .value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .explanation {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .explanation strong {
+            color: var(--text-main);
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85rem;
+            justify-content: center;
+            margin-top: -10px;
+            margin-bottom: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Minecraft Angle & Setup Visualizer</h1>
+        <p>Berechne und visualisiere exakte Rotations-Offsets für Glitches, Teleports und Setups.</p>
+    </header>
+
+    <div class="container">
+        <!-- Links: Eingabemaske -->
+        <div class="card">
+            <h2>Konfiguration</h2>
+            
+            <div class="form-group">
+                <label for="testStart">1. Test-Startwinkel (F3 Screen)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="testStart" value="45" step="0.01" min="-180" max="180">
+                </div>
+                <input type="range" id="testStartSlider" min="-180" max="180" value="45" step="0.5">
+            </div>
+
+            <div class="form-group">
+                <label for="testRawEnd">2. Gemessener F3+C Endwinkel (Rohwert)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="testRawEnd" value="-10920.27" step="0.01">
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Erlaubt extreme Werte direkt aus dem /tp Befehl.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="targetEnd">3. Gewünschter Ziel-Endwinkel (F3 Screen)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="targetEnd" value="45" step="0.01" min="-180" max="180">
+                </div>
+                <input type="range" id="targetEndSlider" min="-180" max="180" value="45" step="0.5">
+            </div>
+
+            <div class="explanation">
+                <strong>Anleitung:</strong> Trage zuerst deinen bekannten Startwinkel und das Ergebnis deines Testlaufs (F3+C) ein. Das Tool berechnet automatisch das exakte Drehmoment (Offset) deines Vorgangs und verrät dir, auf welchen Winkel du schauen musst, um punktgenau bei deinem Wunschergebnis zu landen.
+            </div>
+        </div>
+
+        <!-- Rechts: Visualisierung & Ergebnisse -->
+        <div class="visualizer-pane">
+            <div class="card">
+                <h2>Live-Berechnung</h2>
+                <div class="results-grid">
+                    <div class="result-box blue">
+                        <div class="label">Normierter Test-Endwert</div>
+                        <div class="value" id="resNormEnd">-120.27°</div>
+                    </div>
+                    <div class="result-box amber">
+                        <div class="label">Setup-Offset (Δ)</div>
+                        <div class="value" id="resOffset">-165.27°</div>
+                    </div>
+                    <div class="result-box emerald">
+                        <div class="label">Dein neuer Startwinkel</div>
+                        <div class="value" id="resNewStart">-149.73°</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="display: flex; flex-direction: column; align-items: center;">
+                <h2>Interaktiver MC-Kompass</h2>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot" style="background-color: var(--accent-blue);"></span> Testlauf</div>
+                    <div class="legend-item"><span class="legend-dot" style="background-color: var(--accent-emerald);"></span> Ziel-Lauf</div>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="compassCanvas" width="360" height="360"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const testStartInput = document.getElementById('testStart');
+        const testStartSlider = document.getElementById('testStartSlider');
+        const testRawEndInput = document.getElementById('testRawEnd');
+        const targetEndInput = document.getElementById('targetEnd');
+        const targetEndSlider = document.getElementById('targetEndSlider');
+
+        const resNormEnd = document.getElementById('resNormEnd');
+        const resOffset = document.getElementById('resOffset');
+        const resNewStart = document.getElementById('resNewStart');
+        const canvas = document.getElementById('compassCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Synchronize inputs and sliders
+        testStartInput.addEventListener('input', (e) => { testStartSlider.value = e.target.value; update(); });
+        testStartSlider.addEventListener('input', (e) => { testStartInput.value = e.target.value; update(); });
+        testRawEndInput.addEventListener('input', update);
+        targetEndInput.addEventListener('input', (e) => { targetEndSlider.value = e.target.value; update(); });
+        targetEndSlider.addEventListener('input', (e) => { targetEndInput.value = e.target.value; update(); });
+
+        function normalizeAngle(angle) {
+            let norm = ((angle % 360) + 360) % 360;
+            if (norm >= 180) norm -= 360;
+            return parseFloat(norm.toFixed(2));
+        }
+
+        function mcToCanvasRad(mcAngle) {
+            // MC: 0=S (+Z/Down), -90=E (+X/Right), 180=N (-Z/Up), 90=W (-X/Left)
+            // Canvas standard: 0=Right, 90=Down...
+            // So canvas_deg = mcAngle + 90
+            return ((mcAngle + 90) * Math.PI) / 180;
+        }
+
+        function drawCompass(testStart, testEnd, newStart, targetEnd) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const radius = cx - 40;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw outer ring
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            // Draw grid axes
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
+            ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
+            ctx.stroke();
+
+            // Cardinal Directions labels
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('N (±180°)', cx, cy - radius - 15);
+            ctx.fillText('S (0°)', cx, cy + radius + 15);
+            ctx.fillText('O (-90°)', cx + radius + 22, cy);
+            ctx.fillText('W (+90°)', cx - radius - 22, cy);
+
+            // Helper function to draw sleek vector arrows
+            function drawVector(angle, color, label, isDash = false) {
+                const rad = mcToCanvasRad(angle);
+                const targetX = cx + radius * Math.cos(rad);
+                const targetY = cy + radius * Math.sin(rad);
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2.5;
+                if (isDash) ctx.setLineDash([4, 4]);
+                else ctx.setLineDash([]);
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(targetX, targetY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Draw arrow tip
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(targetX, targetY, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Draw paths as arcs
+            function drawArcPath(start, end, color) {
+                let startRad = mcToCanvasRad(start);
+                let endRad = mcToCanvasRad(end);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius - 25, startRad, endRad, start > end);
+                ctx.stroke();
+            }
+
+            // 1. Draw Test Run components (Blue)
+            drawVector(testStart, '#3b82f6', 'Start');
+            drawVector(testEnd, '#60a5fa', 'Ende (Norm)');
+            drawArcPath(testStart, testEnd, 'rgba(59, 130, 246, 0.4)');
+
+            // 2. Draw Target Run components (Emerald)
+            drawVector(newStart, '#10b981', 'Neu Start');
+            drawVector(targetEnd, '#34d399', 'Ziel');
+            drawArcPath(newStart, targetEnd, 'rgba(16, 185, 129, 0.4)');
+            
+            // Draw center player node
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function update() {
+            const tStart = parseFloat(testStartInput.value) || 0;
+            const tRawEnd = parseFloat(testRawEndInput.value) || 0;
+            const tgtEnd = parseFloat(targetEndInput.value) || 0;
+
+            // Math execution
+            const normEnd = normalizeAngle(tRawEnd);
+            const offset = normalizeAngle(normEnd - tStart);
+            const newStart = normalizeAngle(tgtEnd - offset);
+
+            // Update UI fields
+            resNormEnd.textContent = normEnd + '°';
+            resOffset.textContent = (offset > 0 ? '+' : '') + offset + '°';
+            resNewStart.textContent = newStart + '°';
+
+            // Redraw graphics
+            drawCompass(tStart, normEnd, newStart, tgtEnd);
+        }
+
+        // Init initial render
+        update();
+    </script>
+</body>
+</html>
